@@ -152,22 +152,14 @@
 {% block body_extra %}
   <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
   <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+  <script src="{{ STATIC_URL }}js/vendorDetail.js"></script>
   <script type="text/javascript">
-    $(document).ready(function() {
-    var vendorLocation = [{{ vendor.location.y }}, {{ vendor.location.x }}];
-
-    var map = L.map("map_canvas").setView(vendorLocation, 18);
-
-    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // add a marker in the given location, attach some popup content to it and open the popup
-    L.marker(vendorLocation).addTo(map)
-    .bindPopup('{{ vendor.name }}')
-    .openPopup();
+    $(document).ready(function () {
+    VEGANCITY.vendorDetail.initVendorDetailMap(
+    "{{ vendor.name }}",
+    {{ vendor.location.y }},
+    {{ vendor.location.x }});
     });
-
   </script>
   <link href='http://fonts.googleapis.com/css?family=Cabin:400,700' rel='stylesheet' type='text/css'>
 <style>
