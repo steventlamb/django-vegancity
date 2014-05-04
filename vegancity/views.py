@@ -17,6 +17,7 @@
 
 import functools
 import logging
+import json
 
 from django.http import HttpResponseRedirect, Http404
 from django.shortcuts import render_to_response, get_object_or_404, redirect
@@ -28,6 +29,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib import messages
 from django.views.generic import DetailView, TemplateView
 from django.conf import settings
+from django.template.defaultfilters import linebreaksbr
 
 import django.contrib.auth.views
 
@@ -152,7 +154,7 @@ def vendors(request):
                                if request.GET.get(f.name) or
                                selected_feature_tag_id == str(f.id)]
 
-    vendors = Vendor.approved_objects.select_related('veg_level').all()
+    vendors = Vendor.approved_objects.select_related('veg_level').exclude(location=None)
 
     if selected_neighborhood_id:
         vendors = vendors.filter(neighborhood__id=selected_neighborhood_id)
@@ -169,12 +171,23 @@ def vendors(request):
     if current_query:
         vendors = search.master_search(current_query, vendors)
 
+    vendors_json = json.dumps([{
+        'id': vendor.id,
+        'name': vendor.name,
+        'address': linebreaksbr(vendor.address),
+        'phone': vendor.phone,
+        'url': vendor.get_absolute_url(),
+        'latitude': vendor.location.y,
+        'longitude': vendor.location.x,
+        'vegLevel': vendor.veg_level_id or 0
+    } for vendor in vendors])
+
     ctx = {
         'cuisine_tags': CuisineTag.objects.all(),
         'feature_tags': FeatureTag.objects.all(),
         'neighborhoods': Neighborhood.objects.with_vendors(),
-        'vendor_count': len(vendors),
-        'vendors': vendors,
+        'vendor_count': vendors.count(),
+        'vendors_json': vendors_json,
         'request_user': request.user or None,
         'request_ip': request.META.get('REMOTE_ADDR', None),
         'previous_query': previous_query,
