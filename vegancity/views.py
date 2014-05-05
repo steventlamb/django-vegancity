@@ -187,6 +187,7 @@ def vendors(request):
         'feature_tags': FeatureTag.objects.all(),
         'neighborhoods': Neighborhood.objects.with_vendors(),
         'vendor_count': vendors.count(),
+        'vendors': vendors,
         'vendors_json': vendors_json,
         'request_user': request.user or None,
         'request_ip': request.META.get('REMOTE_ADDR', None),
