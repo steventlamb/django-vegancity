@@ -1,8 +1,8 @@
-/*global $, L */
-
-var VEGANCITY = VEGANCITY || {};
+/*global $, L, VEGANCITY */
 
 (function (N) {
+    var U = N.mapUtils;
+
     N.vendorDetail = N.vendorDetail || {};
 
     N.vendorDetail.initMap = function (name, lat, lng) {
@@ -10,9 +10,7 @@ var VEGANCITY = VEGANCITY || {};
 
         var map = L.map("map_canvas").setView(vendorLocation, 17);
 
-        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
+        L.tileLayer(U.TILE_URL, {attribution: U.TILE_ATTRIBUTION}).addTo(map);
 
         L.marker(vendorLocation).addTo(map).bindPopup(name).openPopup();
     };
