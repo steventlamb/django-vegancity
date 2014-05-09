@@ -36,16 +36,29 @@
   <link rel="stylesheet" href="{{ STATIC_URL }}css/vendors.css">
   <link rel="stylesheet" media="(max-width: 700px)" href="{{ STATIC_URL }}css/vendors_mobile.css">
 
-  <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?sensor=false"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/backbone.js/1.0.0/backbone-min.js"></script>
-  <script type="text/javascript">
-
-    var autoResize = {% if has_get_params %}true{% else %}false{% endif %};
-    var defaultCenter = new google.maps.LatLng({{ center_latitude }}, {{ center_longitude }});
-    var vendors = {{ vendors_json|safe }};
-
-  </script>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
+  <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/bacon.js/0.7.10/bacon.min.js"></script>
+  <script type="text/javascript" src="{{ STATIC_URL }}js/app.js"></script>
   <script type="text/javascript" src="{{ STATIC_URL }}js/vendors.js"></script>
+
+  <script type="text/template" id="vendor-popup-template">
+    <strong>
+      <a id="captionBubble_hyperlink" class="uline" href="<%= url %>"><%= name %></a>
+    </strong><br/>
+    <%= address %><br/>
+    <%= phone %><br/>
+  </script>
+
+  <script type="text/javascript">
+    // var autoResize = {% if has_get_params %}true{% else %}false{% endif %};
+    var defaultCenter = [{{ center_latitude }}, {{ center_longitude }}];
+    var vendors = {{ vendors_json|safe }};
+    var vendorsAndMarkers = VEGANCITY.vendors.initMap(vendors, defaultCenter);
+    VEGANCITY.vendors.initSidebar(vendorsAndMarkers);
+  </script>
+
 </body>
 {% endblock body %}
 

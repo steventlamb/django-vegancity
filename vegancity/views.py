@@ -143,68 +143,52 @@ def user_profile(request, username):
 
 def vendors(request):
     has_get_params = len(request.GET) > 0
+    query = request.GET.get('query', None)
     center_latitude, center_longitude = settings.DEFAULT_CENTER
-    current_query = request.GET.get('current_query', None)
-    previous_query = request.GET.get('previous_query', None)
-    selected_neighborhood_id = request.GET.get('neighborhood', '')
-    selected_cuisine_tag_id = request.GET.get('cuisine_tag', '')
-    selected_feature_tag_id = request.GET.get('feature_tag', '')
-    checked_feature_filters = [f for f
-                               in FeatureTag.objects.with_vendors()
-                               if request.GET.get(f.name) or
-                               selected_feature_tag_id == str(f.id)]
 
-    vendors = Vendor.approved_objects.select_related('veg_level').exclude(location=None)
+    relateds = ('cuisine_tags', 'feature_tags', 'veg_level', 'neighborhood')
+    vendors = (Vendor
+               .approved_objects
+               .exclude(location=None)
+               .prefetch_related(*relateds)
+               .select_related(*relateds))
 
-    if selected_neighborhood_id:
-        vendors = vendors.filter(neighborhood__id=selected_neighborhood_id)
-
-    if selected_cuisine_tag_id:
-        vendors = vendors.filter(cuisine_tags__id=selected_cuisine_tag_id)
-
-    if selected_feature_tag_id:
-        vendors = vendors.filter(feature_tags__id=selected_feature_tag_id)
-
-    for f in checked_feature_filters:
-        vendors = vendors.filter(feature_tags__id__exact=f.id)
-
-    if current_query:
-        vendors = search.master_search(current_query, vendors)
+    if query:
+        vendors = search.master_search(query, vendors)
 
     vendors_json = json.dumps([{
-        'id': vendor.id,
+        'id': str(vendor.id),
         'name': vendor.name,
         'address': linebreaksbr(vendor.address),
         'phone': vendor.phone,
         'url': vendor.get_absolute_url(),
         'latitude': vendor.location.y,
         'longitude': vendor.location.x,
-        'vegLevel': vendor.veg_level_id or 0
+        'vegLevel': vendor.veg_level.super_category,
+        'neighborhood': {'name': vendor.neighborhood.name,
+                         'vendor_id': str(vendor.id),
+                         'id': str(vendor.neighborhood_id) },
+        'cuisine_tags': [{'name': ct.description,
+                          'vendor_id': str(vendor.id),
+                          'id': str(ct.id)}
+                         for ct in vendor.cuisine_tags.all()],
+        'feature_tags': [{'name': ct.description,
+                          'vendor_id': str(vendor.id),
+                          'id': str(ct.id)}
+                         for ct in vendor.feature_tags.all()],
+        
     } for vendor in vendors])
 
     ctx = {
-        'cuisine_tags': CuisineTag.objects.all(),
-        'feature_tags': FeatureTag.objects.all(),
-        'neighborhoods': Neighborhood.objects.with_vendors(),
         'vendor_count': vendors.count(),
         'vendors': vendors,
         'vendors_json': vendors_json,
         'request_user': request.user or None,
         'request_ip': request.META.get('REMOTE_ADDR', None),
-        'previous_query': previous_query,
-        'current_query': current_query,
-        'selected_neighborhood_id': (int(selected_neighborhood_id)
-                                     if selected_neighborhood_id else None),
-        'selected_cuisine_tag_id': (int(selected_cuisine_tag_id)
-                                    if selected_cuisine_tag_id else None),
-        'checked_feature_filters': checked_feature_filters,
-        'has_get_params': has_get_params,
+        'query': query,
         'center_latitude': center_latitude,
         'center_longitude': center_longitude,
     }
-
-    if has_get_params:
-        search_logger.info('USER_SEARCH', extra=ctx)
 
     return render_to_response('vegancity/vendors.html', ctx,
                               context_instance=RequestContext(request))

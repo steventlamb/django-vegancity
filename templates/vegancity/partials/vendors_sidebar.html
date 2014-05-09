@@ -30,65 +30,34 @@
   <div class="filter-cover">
     <span id="neighborhood_mask"></span>
     <span class="filter-cover-right"><i class="fa fa-caret-down"></i></span>
-    <select id="id_neighborhood" name="neighborhood">
-      <option value="" {% if not selected_neighborhood_id %}selected="selected"{% endif %}>---------</option>
-      {% for neighborhood in neighborhoods %}
-      <option value="{{ neighborhood.id }}" {% if neighborhood.id == selected_neighborhood_id %}selected="selected"{% endif %}>{{ neighborhood.name }}</option>
-      {% endfor %}
-    </select>
+    <select id="id_neighborhood" name="neighborhood"></select>
   </div>
+
   <h4>Browse by Cuisine</h4>
   <div class="filter-cover">
     <span id="cuisine_mask"></span>
     <span class="filter-cover-right"><i class="fa fa-caret-down"></i></span>
-    <select id="id_cuisine" name="cuisine_tag">
-      <option value="" {% if not selected_cuisine_tag_id %}selected="selected"{% endif %}>---------</option>
-      {% for cuisine_tag in cuisine_tags %}
-      <option value="{{ cuisine_tag.id }}" {% if cuisine_tag.id == selected_cuisine_tag_id %}selected="selected"{% endif %}>{{ cuisine_tag.description }}</option>
-      {% endfor %}
-    </select>
+    <select id="id_cuisine_tags" name="cuisine_tags"></select>
   </div>
 
   <h4>Browse by Features</h4>
-
   <div class="filter-cover features-filter-cover">
     <span class="filter-cover-right"><i class="fa fa-caret-down"></i></span>
-    <select id="id_feature" name="feature_tag">
-      <option value="" {% if selected_feature_tag %}selected="selected"{% endif %}>---------</option>
-      {% for feature_tag in feature_tags %}
-      <option value="{{ feature_tag.id }}">
-        {{ feature_tag.description }}
-      </option>
-      {% endfor %}
-    </select>
+    <select id="id_feature_tags" name="feature_tags"></select>
   </div>
 
-  <div id="checked_feature_tags">
-    {% for checked in checked_feature_filters %}
-    <label class="checkbox">
-      <input type="checkbox" id="id_feature_{{ checked.name }}" name="{{ checked.name }}" value="True" checked="checked" onchange="this.form.submit()">
-      {{ checked }}
-    </label>
-    {% endfor %}
-  </div>
+  <div id="checked_feature_tags"></div>
 
-  {% if selected_neighborhood_id or selected_cuisine_tag_id or checked_feature_filters %}
-  <a href="#" class="button" id="clear_all">Clear Filters</a>
-  {% else %}
-  {% endif %}
+  <a href="#" class="button" id="clear_all" style="display: none;">Clear Filters</a>
 </div>
 </form>
 
 <div id="vendor-area">
-  <h5>Showing {{ vendor_count|default:"0" }} vendors</h5>
-  <div class="vendor-filter-cover">Jump to Vendor
+  <h5>Showing <span id="vendor-count">{{ vendor_count|default:"0" }}</span> vendors</h5>
+  <div class="vendor-filter-cover">
+    <span>Jump to Vendor</span>
     <span class="vendor-filter-cover-right"><i class="fa fa-caret-down"></i></span>
-    <select id="id_vendors" name="vendor">
-      <option value="">---------</option>
-      {% for vendor in vendors %}
-      <option value="{{ vendor.id }}">{{ vendor.name }}</option>
-      {% endfor %}
-    </select>
+    <select id="id_vendors" name="vendor"></select>
   </div>
 </div>
 

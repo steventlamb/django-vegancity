@@ -106,8 +106,8 @@ h5 {
 }
 
 #id_neighborhood,
-    #id_cuisine,
-        #id_feature,
+    #id_cuisine_tags,
+        #id_feature_tags,
             #id_vendors {
     height: 35px;
     background-color: white;

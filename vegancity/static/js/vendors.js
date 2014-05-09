@@ -1,210 +1,66 @@
-/*global google *, $, _, Backbone */
+/*global $, L, _, VEGANCITY */
 
-/////////////////////////////////////
-// TEMPLATES
-/////////////////////////////////////
+(function (N) {
+    var U = N.mapUtils,
+        optionTemplate = _.template('<option value="<%= id %>"><%= name %></option>'),
+        optionUniquifier = function (entity) { return entity.id + entity.name; };
 
-var summaryCaptionTemplate = [
-    '<strong><a id="captionBubble_hyperlink" class="uline" href="<%= url %>"><%= name %></a></strong><br/>',
-    '<%= address %><br/>',
-    '<%= phone %><br/>'].join(""),
-    detailCaptionTemplate = '<strong><%= name %></strong><br/>',
+    function initSidebar(vendors) {
+        _.each(['neighborhood', 'cuisine_tags', 'feature_tags'],
+               function (filterCategory) {
+                   var filters = _.chain(vendors)
+                           .pluck(filterCategory)
+                           .flatten()
+                           .uniq(optionUniquifier)
+                           .value(),
+                       els = _.map(filters, optionTemplate);
+                   $('#id_' + filterCategory).html(els);
+               });
 
-    // TODO: all of this can be abstracted beyond veg level to allow coloring by anything
-    vegLevelCategoryMapping = {
-        1: 'vegan',
-        2: 'vegetarian',
-        3: 'vegetarian',
-        4: 'vegetarian',
-        5: 'omni',
-        6: 'omni',
-        7: 'omni',
-        0: 'omni' // There is no zero in postgres, but we are coercing nulls to 0
-    },
-    vegCategoryMarkerMapping = {
-        'vegan': '/static/images/marker-vegan.png',
-        'vegetarian': '/static/images/marker-vegetarian.png',
-        'omni': '/static/images/marker-omni.png'
-    };
-
-/////////////////////////////////////
-// MAP WRAPPER OBJECT
-/////////////////////////////////////
-
-var vendorMap = {
-    initialize: function(map_container_id, vendors, mapType, autoResize) {
-        var center;
-        this.vendors = vendors;
-        this.captionBubble = new google.maps.InfoWindow();
-        this.map = null;
-        this.markers = {};
-        this.markerImage = null;
-
-        if (typeof defaultCenter === "undefined") {
-            center = this.getBounds().getCenter();
-        } else {
-            center = defaultCenter;
-        }
-
-        this.map = new google.maps.Map($(map_container_id).get(0),
-                                       { 
-                                           zoom: 14,
-                                           maxZoom: 18,
-                                           minZoom: 9,
-                                           center: center,
-                                           mapTypeId: google.maps.MapTypeId.ROADMAP 
-                                       });
-
-
-        this.mapType = mapType;
-        if (mapType === "summary") {
-            this.captionTemplate = summaryCaptionTemplate;
-            // this.markerImage = "//www.google.com/mapfiles/marker.png";
-        } else if (mapType === "detail") {
-            this.captionTemplate = detailCaptionTemplate;
-            // this.markerImage = "//www.google.com/mapfiles/arrow.png";
-        }
-
-        if (autoResize === true) {
-            vendorMap.redrawToBounds();
-        }
-
-        vendorMap.plotAllPoints();
-    },
-    
-    plotAllPoints: function() {
-        _.each(this.vendors, function(vendor) {
-            this.markers[vendor.id] = this.place(vendor);
-        }, this);
-    },
-
-    getBounds: function () {
-        var bounds = new google.maps.LatLngBounds();
-        _.each(this.vendors, function(vendor) {
-            var LatLng = new google.maps.LatLng(vendor.latitude, vendor.longitude);
-            bounds.extend(LatLng);
+        var $vendors = $('#id_vendors');
+        $vendors.change(function (event) {
+            var vendorId = $vendors.find('option:selected').val(),
+                marker = _.findWhere(vendors, {id: vendorId}).marker;
+            marker.openPopup();
         });
-        return bounds;
-    },
+        $vendors.html(_.map(vendors, optionTemplate));
 
-    redrawToBounds: function () {
-        this.map.fitBounds(this.getBounds());
-    },
+        var $neighborhoods = $('#id_neighborhood');
+        $neighborhoods.change(function (event) {
+            var neighborhoodId = $neighborhoods.find('option:selected').val(),
+                matchVendors = _.chain(vendors)
+                    .pluck('neighborhood')
+                    .where({id: neighborhoodId})
+                    .pluck('vendor_id')
+                    .value(),
+                markers = _.chain(vendors)
+                    .filter(function (vendor) { 
+                        return !_.contains(matchVendors, vendor.id);
+                    })
+                    .pluck('marker')
+                    .value();
 
-
-    place: function(vendor) {
-        var image = null,
-            latLng = new google.maps.LatLng(vendor.latitude, vendor.longitude),
-            marker = null,
-            vendorMap = this,
-            bodyText = _.template(this.captionTemplate)(vendor);
-
-        if (this.mapType === 'summary') {
-            // convert veg level to super category and then lookup an icon for that category
-            // TODO make this more readable.
-            image = new google.maps.MarkerImage(vegCategoryMarkerMapping[vegLevelCategoryMapping[vendor.vegLevel]]);
-        } else if (this.mapType === 'detail') {
-            image = new google.maps.MarkerImage("/static/images/vegphilly-carrot-map-logo.png");
-        }
-
-        marker = new google.maps.Marker({
-                position: latLng,
-                icon:image,
+            _.each(markers, function (marker) {
+                marker._map.removeLayer(marker);
+            });
         });
-        marker.setMap(this.map);
-
-        if (bodyText) {
-            google.maps.event.addListener(marker, 'click', function () {
-                vendorMap.captionBubble.setContent(bodyText);
-                vendorMap.captionBubble.open(vendorMap.map, this);
-    	    });
-        };
-        return marker;   
-    }
-};
-
-var SearchFormView = Backbone.View.extend({
-    events: {
-        "click #clear_all": function (event) {
-            this.resetFilters();
-            $("#filters").submit();
-        },
-        "click #clear_search": function (event) {
-            $("#search-input").val("");
-            $("#filters").submit();
-        },
-       "change #id_vendors": function (event) {
-            var vendor_id = $("#id_vendors").val();
-            google.maps.event.trigger(vendorMap.markers[vendor_id], 'click');
-            $('html, body').animate({ scrollTop: 100 }, 'slow');
-            $('#map-area').show();
-       },
-        "change #id_neighborhood, #id_cuisine, #id_checked_features, #id_feature": function (event) {
-            $('form#filters').submit();
-        }
-    },
-
-    initialize: function () {
-        //TODO: this is a hack, should be able to fix this in django.
-        //TODO: change the feature modelchoicefield to a choicefield
-        $("#id_feature").val("");
-
-        vendorMap.initialize("#map_canvas", vendors, "summary", autoResize);
-
-        this.styleVegLevelPins();
-    },
-
-    styleVegLevelPins: function() {
-        var vegLevels = [
-            { pinSummary: "Vegan", icon: vegCategoryMarkerMapping['vegan'] },
-            { pinSummary: "Vegetarian", icon: vegCategoryMarkerMapping['vegetarian'] },
-            { pinSummary: "Non-Vegetarian", icon: vegCategoryMarkerMapping['omni'] }
-        ];
-
-        _.each(vegLevels, function (vegLevel) {
-            var legendRowTemplate = '<tr><td><img src="<%= icon %>"> <%= pinSummary %></tr></td>',
-                tableRow = _.template(legendRowTemplate)({
-                    pinSummary: vegLevel.pinSummary,
-                    icon: vegLevel.icon
-                });
-
-            $("#legend-table tbody").append(tableRow);
-        });
-
-        _.each(_.range(0, 7), function (i) {
-            var category = vegLevelCategoryMapping[i],
-                imageUrl = vegCategoryMarkerMapping[i];
-            $(".veg-level-" + i).attr("src", imageUrl);
-        });
-
-    },
-
-    resetFilters: function () {
-        $("#id_neighborhood, #id_cuisine, #id_checked_features, #id_feature").val(0);
-        $("input:checkbox").val(null);
     }
 
-});
+    function initMap(vendors, defaultCenter) {
+        var map = L.map("map_canvas").setView(defaultCenter, 13);
 
-$(document).ready(function () {
-    new SearchFormView({el: $('body') });
+        L.tileLayer(U.TILE_URL, {attribution: U.TILE_ATTRIBUTION}).addTo(map);
 
-    function syncSelect(srcSelector, destSelector) {
-        var itemName = $(srcSelector + ' :selected').text();
-        $(destSelector).text(itemName);
+        return _.map(vendors, function (vendor) {
+            var marker = L.marker([vendor.latitude, vendor.longitude])
+                    .addTo(map)
+                    .bindPopup(vendor.name);
+            return _.extend({}, vendor, {marker: marker});
+        });
     }
 
-    var syncNeighborhoodMask = _.partial(syncSelect, '#id_neighborhood', '#neighborhood_mask');
-    var syncCuisineMask = _.partial(syncSelect, '#id_cuisine', '#cuisine_mask');
+    N.vendors = N.vendors || {};
+    N.vendors.initMap = initMap;
+    N.vendors.initSidebar = initSidebar;
 
-    $('#id_neighborhood').change(syncNeighborhoodMask);
-    $('#id_cuisine_tag').change(syncCuisineMask);
-    $(document)
-        .ready(syncNeighborhoodMask)
-        .ready(syncCuisineMask);
-
-    $('#map-show-controls').click(function () {
-        $('#map-area').hide();
-    });
-
-});
+})(VEGANCITY);
